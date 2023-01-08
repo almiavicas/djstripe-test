@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  django:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./djstripetest:/app/djstripetest:ro
+      - ./app:/app/app:ro
+      - ./app/migrations:/app/app/migrations:rw
+      - ./manage.py:/app/manage.py:ro
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:13.7-bullseye
+    volumes:
+      - ./postgres:/var/lib/postgresql/data:rw
+    environment:
+      - POSTGRES_PASSWORD=password
+    ports:
+      - 5432:5432
+  stripe:
+    image: stripe/stripe-cli:v1.7.4
+    # In case Stripe CLI is used to perform local webhook testing, set x-djstripe-webhook-secret custom header to output of Stripe CLI.
+    command: ["listen", "-H", "x-djstripe-webhook-secret: whsec_15975bab5e214a017586d05d2728a92bd6a0398fa2b9bd5b542dcaebef797383", "--forward-to", "http://web:8000/djstripe/webhook/"]
+    depends_on:
+      - web
+    environment:
+      - STRIPE_API_KEY=sk_test_51Az4ZjAeLXNQtzMwvw8RRqQ2l5IEwcB5MspATE8ZzFzy7S7QOz62c7v7ohpiaWLHvxtC57cHR5clmHQWqEy3NV5200m6bZ272V
+      - STRIPE_DEVICE_NAME=djstripe_docker
